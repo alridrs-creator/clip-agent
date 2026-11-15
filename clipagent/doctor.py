@@ -49,7 +49,7 @@ def check() -> dict:
     else:
         verdict = "weak: expect very slow renders - keep clips under 30s, use whisper_model=tiny"
     tools = {t: bool(tool(t)) for t in ("ffmpeg", "ffprobe", "yt-dlp", "streamlink")}
-    tools["TwitchDownloaderCLI (optional)"] = bool(tool("TwitchDownloaderCLI"))
+    tools["TwitchDownloaderCLI (auto-installs on first VOD chat)"] = bool(tool("TwitchDownloaderCLI"))
     from .tts import kokoro_available
     tools["kokoro human voices (models/ files)"] = kokoro_available()
     keys = {

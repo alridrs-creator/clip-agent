@@ -15,3 +15,6 @@ models/
 voice_samples_all.mp3
 *.mp4
 *.wav
+
+# downloaded helper tools (TwitchDownloaderCLI etc.)
+bin/

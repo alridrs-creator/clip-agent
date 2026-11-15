@@ -147,20 +147,48 @@ def latest_vods(streamer: str, n: int = 5) -> list[dict]:
              "url": v["url"], "views": v["view_count"]} for v in vids]
 
 
+TDL_REPO = "https://api.github.com/repos/lay295/TwitchDownloader/releases/latest"
+
+
+def ensure_twitchdownloader() -> str:
+    """Path to TwitchDownloaderCLI (github.com/lay295/TwitchDownloader, MIT). Downloads it into ./bin on first use."""
+    found = tool("TwitchDownloaderCLI")
+    if found:
+        return found
+    import io
+    import platform
+    import zipfile
+    from .common import ROOT
+    system, machine = platform.system(), platform.machine().lower()
+    arm = machine in ("arm64", "aarch64")
+    suffix = {"Windows": "Windows-x64", "Darwin": "MacOSArm64" if arm else "MacOS-x64",
+              "Linux": "LinuxArm64" if arm else "Linux-x64"}.get(system)
+    if not suffix:
+        raise SystemExit("Install TwitchDownloaderCLI manually from github.com/lay295/TwitchDownloader/releases into ./bin")
+    rel = requests.get(TDL_REPO, timeout=30).json()
+    asset = next((a for a in rel.get("assets", []) if a["name"].startswith("TwitchDownloaderCLI")
+                  and a["name"].endswith(f"-{suffix}.zip")), None)
+    if not asset:
+        raise SystemExit("Couldn't find a TwitchDownloaderCLI build for this system; install it into ./bin manually.")
+    print(f"downloading {asset['name']} ...", file=__import__("sys").stderr, flush=True)
+    data = requests.get(asset["browser_download_url"], timeout=600).content
+    bindir = ROOT / "bin"
+    bindir.mkdir(exist_ok=True)
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        for name in z.namelist():
+            if name.startswith("TwitchDownloaderCLI") or name.upper().startswith("COPYRIGHT"):
+                z.extract(name, bindir)
+    exe = bindir / ("TwitchDownloaderCLI.exe" if system == "Windows" else "TwitchDownloaderCLI")
+    if system != "Windows":
+        exe.chmod(0o755)
+    return str(exe)
+
+
 def download_chat(vod_url_or_id: str, out: Path) -> Path:
-    """Chat replay JSON. Uses TwitchDownloaderCLI if installed, else the chat-downloader package."""
+    """Chat replay JSON via TwitchDownloaderCLI (auto-installed into ./bin on first use)."""
     v = vod_info(vod_url_or_id)
     out.parent.mkdir(parents=True, exist_ok=True)
-    tdcli = tool("TwitchDownloaderCLI")
-    if tdcli:
-        run([tdcli, "chatdownload", "--id", v["id"], "-o", out, "--collision", "Overwrite"])
-        return out
-    from chat_downloader import ChatDownloader  # fallback, pure python
-    msgs = []
-    for m in ChatDownloader().get_chat(v["url"]):
-        msgs.append({"t": m.get("time_in_seconds", 0), "user": m.get("author", {}).get("name", ""),
-                     "msg": m.get("message", "")})
-    write_json(out, {"format": "simple", "messages": msgs})
+    run([ensure_twitchdownloader(), "chatdownload", "--id", v["id"], "-o", out, "--collision", "Overwrite"])
     return out
 
 
