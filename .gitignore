@@ -1,0 +1,17 @@
+.venv/
+.env
+__pycache__/
+library/
+output/
+inbox/*
+!inbox/.gitkeep
+music/*
+!music/.gitkeep
+brand/*.png
+brand/fonts/*
+!brand/fonts/.gitkeep
+data/
+models/
+voice_samples_all.mp3
+*.mp4
+*.wav

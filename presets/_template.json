@@ -1,0 +1,10 @@
+{
+  "preset": "my-game",
+  "game_name": "Exact Twitch category name, e.g. Fortnite",
+  "game_short": "Short name used in titles, e.g. Fortnite",
+  "spoiler_text": "SPOILERS AHEAD",
+  "default_hashtags": ["#fortnite", "#gaming", "#clips"],
+  "youtube_queries": ["fortnite funny moments"],
+  "hook_examples": ["HE WON WITH ONE HP LEFT"],
+  "notes": "Anything the agent should know about this game or niche."
+}

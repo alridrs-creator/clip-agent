@@ -1,0 +1,10 @@
+{
+  "preset": "gta6",
+  "game_name": "Grand Theft Auto VI",
+  "game_short": "GTA 6",
+  "spoiler_text": "GTA VI SPOILERS AHEAD",
+  "default_hashtags": ["#gta6", "#gtavi", "#gta6clips", "#gaming"],
+  "youtube_queries": ["GTA 6 gameplay", "GTA 6 funny moments", "GTA 6 streamer reaction"],
+  "hook_examples": ["GTA 6 MAP IS SO BIG REVIEWERS GOT LOST", "HE STOLE A JET IN 10 SECONDS", "GTA 6 ROADS ARE TOO REAL"],
+  "notes": "Story missions get the spoiler card. Avoid 'Rockstar' or 'GTA' as the whole channel name."
+}

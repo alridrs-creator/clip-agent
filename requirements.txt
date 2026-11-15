@@ -1,0 +1,14 @@
+faster-whisper>=1.1
+opencv-python-headless>=4.9,<5
+edge-tts>=7.0
+numpy>=1.26
+pillow>=10
+requests>=2.31
+streamlink>=6.0
+yt-dlp>=2025.1.1
+chat-downloader>=0.2.8
+kokoro-onnx>=0.4
+soundfile>=0.12
+# NVIDIA GPU only (fast captions):
+nvidia-cublas-cu12; sys_platform == 'win32' or sys_platform == 'linux'
+nvidia-cudnn-cu12>=9,<10; sys_platform == 'win32' or sys_platform == 'linux'
