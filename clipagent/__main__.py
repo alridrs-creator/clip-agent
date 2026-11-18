@@ -68,10 +68,21 @@ def main() -> None:
     k.add_argument("--title")
 
     # --- highlights
-    s = sub.add_parser("spikes", help="find highlights: chat <file> | audio <video> | heatmap <info.json>")
-    s.add_argument("kind", choices=["chat", "audio", "heatmap"])
+    s = sub.add_parser("spikes", help="find highlights: chat <file> | audio <video> | heatmap <info.json> | multi <video>")
+    s.add_argument("kind", choices=["chat", "audio", "heatmap", "multi"])
     s.add_argument("path")
     s.add_argument("--top", type=int, default=10)
+    s.add_argument("--chat", help="multi: chat replay file for the same video")
+    s.add_argument("--signals", default=None,
+                   help="multi: which signals to combine (chat,audio,event,speech,screen). Default chat,audio,event "
+                        "plus speech / screen when config signals_speech / signals_gta6_screen is on")
+    g6 = sub.add_parser("screen-events", help="GTA 6 full-screen text events in a video (template plugin)")
+    g6.add_argument("video")
+    g6t = sub.add_parser("screen-template", help="cut a GTA 6 screen-text template from a real frame")
+    g6t.add_argument("video")
+    g6t.add_argument("t", type=float, help="second in the video where the text is on screen")
+    g6t.add_argument("label", help="e.g. wasted, busted, mission_passed")
+    g6t.add_argument("--box", help="x,y,w,h in a 640x360 frame (default: find the text in the middle band)")
     f = sub.add_parser("frame", help="save a frame (to look at): frame <clip_id|video> <t> <out.png>")
     f.add_argument("src")
     f.add_argument("t", type=float)
@@ -201,8 +212,24 @@ def main() -> None:
         out(cut_clip(A.clip_id, A.start, A.end, A.title))
     elif cmd == "spikes":
         from . import spikes
-        fn = {"chat": spikes.chat_spikes, "audio": spikes.audio_spikes, "heatmap": spikes.heatmap_spikes}[A.kind]
-        out(fn(Path(A.path), top=A.top))
+        if A.kind == "multi":
+            from .common import config as _cfg
+            from .signals import multi_spikes
+            use = A.signals or ",".join(["chat", "audio", "event"] + (["speech"] if _cfg().get("signals_speech") else [])
+                                        + (["screen"] if _cfg().get("signals_gta6_screen") else []))
+            out(multi_spikes(Path(A.path), Path(A.chat) if A.chat else None, A.top, use))
+        else:
+            fn = {"chat": spikes.chat_spikes, "audio": spikes.audio_spikes, "heatmap": spikes.heatmap_spikes}[A.kind]
+            out(fn(Path(A.path), top=A.top))
+    elif cmd == "screen-events":
+        from .gta6screen import screen_events, templates
+        if not templates():
+            raise SystemExit("no templates in presets/gta6_screens yet: add one with screen-template")
+        out(screen_events(Path(A.video)))
+    elif cmd == "screen-template":
+        from .gta6screen import save_template
+        box = tuple(int(x) for x in A.box.split(",")) if A.box else None
+        out({"template": str(save_template(Path(A.video), A.t, A.label, box))})
     elif cmd == "frame":
         from .common import LIBRARY, load_clip
         from .layout import save_frame

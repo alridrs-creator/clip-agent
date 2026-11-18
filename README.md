@@ -84,6 +84,26 @@ picture and banner.
 4. **Publish:** `package` builds the cover and captions with a credits block. After your OK, posts go
    to Buffer through its website or its beta API.
 
+### 🔎 How it finds moments
+
+Every signal gives a score for each second of video. The scores are weighted and added, and a second that
+crosses the threshold becomes a clip window (about 22 s before the peak and 14 s after). Weights live in the game preset
+(`presets/gta6.json`, `"signals"` block). Run it on any recording:
+`python -m clipagent spikes multi <video> --chat <chat.json> --signals chat,audio,event,speech,screen`
+
+| Signal | What it measures | In `spikes multi` by default |
+|---|---|---|
+| 💬 **Chat speed** | Messages per second against the stream's own rolling baseline (robust z-score), shifted back ~6 s because chat reacts late | yes |
+| 🔥 **Hype words** | Chat lines with KEKW, CLIP IT, NO WAY, OMEGALUL… count 2.5× a normal message. Sub, raid, giveaway and greeting floods are filtered out | yes |
+| 🔊 **Voice volume** | The streamer's loudness (dB) jumping above a rolling 3-minute median: shouting, screaming, laughing. Gunfire alone can't trigger a clip, it only boosts the others | yes |
+| 🌫️ **Grey screen (generic)** | A sudden, lasting drop in colour saturation, the way many games grey out on death. Game-agnostic, so it also fires on black fades and night scenes: of 43 saved GTA 6 moments where it fired, none was a death screen. For GTA 6 use the screen plugin below | yes |
+| 🗣️ **Speech keywords** | Hype phrases the streamer says in the Whisper transcript: "no way", "let's go", "oh my god", "what the…", "да ладно", "ничего себе"… | no: `config signals_speech=true` |
+| 💀 **GTA 6 screen events** | Full-screen game text found by template matching on edge maps (`clipagent/gta6screen.py`). Ships with the real GTA 6 **wasted** and **busted** screens, cut from live streams; add more (mission passed…) from your own recordings with `screen-template` | no: `config signals_gta6_screen=true` |
+| 🎯 **Combined score** | `chat×1.0 + volume×0.45 + grey-screen×3 + speech×0.8 + screen×4`, threshold 4. A death screen alone is a moment; volume and speech only boost | — |
+
+Templates: `python -m clipagent screen-template <video> <second> wasted` cuts the text from a real frame, and
+`python -m clipagent screen-events <video>` lists what it finds. Without templates the screen plugin does nothing.
+
 ---
 
 ## 🚀 Quick Start
@@ -167,6 +187,8 @@ another game, or just tell the agent which game you clip.
 | `whisper_model` | `auto` | `medium` on GPU, `small` on CPU |
 | `encoder` | `auto` | NVENC if available, else x264 |
 | `buffer_media_url_prefix` | empty | Public URL that mirrors `output/` (Buffer API video upload) |
+| `signals_speech` | `false` | Add the streamer's hype phrases (Whisper transcript) to `spikes multi` |
+| `signals_gta6_screen` | `false` | Add GTA 6 full-screen text events (templates in `presets/gta6_screens/`) to `spikes multi` |
 
 ---
 
