@@ -133,6 +133,9 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
      `blur` (zoomed gameplay band on a blurred background, best for pure gameplay), `crop` (full-screen
      centre crop). If the facecam box is wrong, look at `output/<post_id>/work/facecam0.png` and set
      `"cam": {"x":..,"y":..,"w":..,"h":..}` in source pixels.
+   - `trim_bottom` (plan or segment, default `config trim_bottom` 0.14): cuts that share off the bottom of the
+     gameplay so a streamer's own burned-in captions don't show under ours. Raise it if they still show
+     in the preview; set 0 when the bottom of the screen matters.
    - `hook`: 3-7 words, curiosity or shock, ALL CAPS, no emoji ("HE STOLE A JET IN 10 SECONDS").
    - `subtitles`: `original` (transcribe the streamer), `voiceover`, or `none`.
    - `voiceover`: when there's no talking (own gameplay, silent YouTube footage) or to add commentary.

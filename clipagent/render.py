@@ -180,6 +180,13 @@ def render_segment(seg: dict, idx: int, work: Path, plan: dict, fmt: str) -> tup
         en = "+".join(f"between(t,{t:.2f},{t + 0.07:.2f})" for t in hits[:4])
         flash = f",drawbox=x=0:y=0:w=iw:h=ih:color=white@0.35:t=fill:enable='{en}'"
 
+    # cut the bottom of the gameplay off so the streamer's own burned-in captions don't show twice
+    from .common import config as _cfg
+    tb = float(seg.get("trim_bottom", plan.get("trim_bottom", _cfg().get("trim_bottom", 0.14)) if fmt == "short" else 0))
+    tb = max(0.0, min(0.4, tb))
+    eh = int(info["height"] * (1 - tb)) & ~1
+    tbc = f"crop=iw:{eh}:0:0," if tb else ""
+
     # --- layout graph
     if fmt == "long":
         vgraph = (f"[0:v]fps={FPS},{gfx},scale={cw}:{ch}:force_original_aspect_ratio=decrease,"
@@ -189,7 +196,7 @@ def render_segment(seg: dict, idx: int, work: Path, plan: dict, fmt: str) -> tup
         camh = int(min(760, max(600, W * cam["h"] / cam["w"]))) & ~1
         gh = H - camh
         # crop the gameplay band away from the webcam overlay so it doesn't show twice
-        k = gh / max(1, info["height"])
+        k = gh / max(1, eh)
         sw = int(info["width"] * k)
         gx = (sw - W) // 2
         if cam["x"] + cam["w"] / 2 > info["width"] / 2:      # cam on the right
@@ -198,21 +205,21 @@ def render_segment(seg: dict, idx: int, work: Path, plan: dict, fmt: str) -> tup
             gx = min(sw - W, max(gx, int((cam["x"] + cam["w"]) * k)))
         vgraph = (f"[0:v]fps={FPS},split[a][b];"
                   f"[a]crop={cam['w']}:{cam['h']}:{cam['x']}:{cam['y']},scale={W}:{camh}:force_original_aspect_ratio=increase,crop={W}:{camh}[cam];"
-                  f"[b]{gfx},scale=-2:{gh},crop={W}:{gh}:{gx}:0{flash}[game];"
+                  f"[b]{tbc}{gfx},scale=-2:{gh},crop={W}:{gh}:{gx}:0{flash}[game];"
                   f"[cam][game]vstack,setsar=1[v0]")
         sub_y, credit_xy = camh + 170, (30, camh - 22)
     elif layout == "crop":
-        vgraph = f"[0:v]fps={FPS},{gfx},scale=-2:{H},crop={W}:{H},setsar=1{flash}[v0]"
+        vgraph = f"[0:v]fps={FPS},{tbc}{gfx},scale=-2:{H},crop={W}:{H},setsar=1{flash}[v0]"
         sub_y, credit_xy = int(H * 0.66), (40, 300)
     else:  # blur: zoomed gameplay band on a blurred copy of itself
         zoom = float(seg.get("zoom", 1.3))
         fw = int(W * zoom) & ~1
-        fh = int(fw * info["height"] / max(1, info["width"])) & ~1
+        fh = int(fw * eh / max(1, info["width"])) & ~1
         fh = min(fh, int(H * 0.62)) & ~1
         y0 = (H - fh) // 2 - 60
         vgraph = (f"[0:v]fps={FPS},split[a][b];"
                   f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=28,eq=brightness=-0.12[bg];"
-                  f"[b]{gfx},scale={fw}:-2,crop={W}:{fh}{flash}[fg];"
+                  f"[b]{tbc}{gfx},scale={fw}:-2,crop={W}:{fh}{flash}[fg];"
                   f"[bg][fg]overlay=0:{y0},setsar=1[v0]")
         sub_y, credit_xy = y0 + fh + 120, (40, y0 + fh + 10)
 
