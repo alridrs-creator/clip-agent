@@ -130,8 +130,30 @@ def make(kind: str, prompt: str, text: str = "", out: Path | None = None, provid
     return out
 
 
-def cover_from_frame(frame_png: Path, text: str, out: Path, vertical: bool = True) -> Path:
-    """Post cover = real frame from the clip (best for originality) + big title."""
+def split_cover_frame(frame_png: Path, cam: dict, out_png: Path) -> Path:
+    """9:16 frame like the short itself: the streamer's webcam on top, gameplay (beside the cam) below."""
+    w, h = SIZES["reel_cover"]
+    src = Image.open(frame_png).convert("RGB")
+    face = src.crop((cam["x"], cam["y"], cam["x"] + cam["w"], cam["y"] + cam["h"]))
+    camh = int(min(h * 0.55, max(h * 0.4, w * cam["h"] / cam["w"])))
+    # gameplay without the webcam overlay: take the side of the frame away from the cam
+    if cam["x"] + cam["w"] / 2 > src.width / 2:
+        game = src.crop((0, 0, max(1, cam["x"]), src.height))
+    else:
+        game = src.crop((min(src.width - 1, cam["x"] + cam["w"]), 0, src.width, src.height))
+    if game.width < src.width * 0.4:
+        game = src
+    img = Image.new("RGB", (w, h))
+    img.paste(fit(face, w, camh), (0, 0))
+    img.paste(fit(game, w, h - camh), (0, camh))
+    img.save(out_png)
+    return out_png
+
+
+def cover_from_frame(frame_png: Path, text: str, out: Path, vertical: bool = True, text_pos: str = "top") -> Path:
+    """Post cover = real frame from the clip (best for originality) + big title.
+
+    text_pos="bottom" puts the title on the lower half (used when a face fills the top)."""
     w, h = SIZES["reel_cover"] if vertical else SIZES["thumbnail"]
     src = Image.open(frame_png).convert("RGB")
     # trim letterbox bars (black rows/cols) before cropping to the cover shape
@@ -142,13 +164,18 @@ def cover_from_frame(frame_png: Path, text: str, out: Path, vertical: bool = Tru
     if bot - top > g.height * 0.5:
         src = src.crop((0, top, src.width, bot))
     img = fit(src, w, h)
-    # darken top area for legibility
+    bottom = vertical and text_pos == "bottom"
+    # darken the text area for legibility
     grad = Image.new("L", (1, h))
     for yy in range(h):
-        grad.putpixel((0, yy), int(170 * max(0, 1 - yy / (h * 0.55))))
+        d = (yy / h - 0.45) / 0.55 if bottom else 1 - yy / (h * 0.55)
+        grad.putpixel((0, yy), int(170 * max(0, min(1, d))))
     shade = Image.new("RGB", (w, h), (0, 0, 0))
     img = Image.composite(shade, img, grad.resize((w, h)))
-    box = (60, int(h * 0.12), w - 120, int(h * 0.28)) if vertical else (60, 40, w - 120, int(h * 0.42))
+    if bottom:
+        box = (60, int(h * 0.64), w - 120, int(h * 0.2))  # (x, y, w, h)
+    else:
+        box = (60, int(h * 0.12), w - 120, int(h * 0.28)) if vertical else (60, 40, w - 120, int(h * 0.42))
     img = draw_text(img, text, box, accent=(255, 214, 0))
     img.save(out, quality=92)
     return out

@@ -72,8 +72,9 @@ def _handles(render: dict, platform: str) -> list[str]:
     return out
 
 
-def package(post_id: str, cover_time: float | None = None) -> dict:
-    from .brand import cover_from_frame
+def package(post_id: str, cover_time: float | None = None, cover_mode: str = "auto") -> dict:
+    """cover_mode: auto (facecam on top when the short uses the split layout, else plain frame) | face | frame"""
+    from .brand import cover_from_frame, split_cover_frame
     from .layout import save_frame
     d = OUTPUT / post_id
     render = read_json(d / "render.json", None)
@@ -90,7 +91,15 @@ def package(post_id: str, cover_time: float | None = None) -> dict:
     t = cover_time if cover_time is not None else probe(raw)["duration"] * 0.4
     frame = save_frame(raw, t, d / "work" / "cover_frame.png")
     vertical = render["format"] == "short"
-    cover = cover_from_frame(frame, cap.get("cover_text") or "", d / ("cover.jpg"), vertical=vertical)
+    first = (render.get("sources") or [{}])[0]
+    cam = first.get("cam") if first.get("layout") == "split" else None
+    text_pos = "top"
+    if vertical and cam and cover_mode in ("auto", "face"):
+        frame = split_cover_frame(frame, cam, d / "work" / "cover_split.png")
+        text_pos = "bottom"
+    elif cover_mode == "face" and not cam:
+        print("no facecam in this short - using a plain frame for the cover", flush=True)
+    cover = cover_from_frame(frame, cap.get("cover_text") or "", d / ("cover.jpg"), vertical=vertical, text_pos=text_pos)
     texts = {
         "tiktok": f"{cap.get('tiktok', '')}\n\n{credits}\n{tags} {' '.join(_handles(render, 'tiktok'))}".strip(),
         "instagram": f"{cap.get('instagram', '')}\n\n{credits}\n.\n{tags} {' '.join(_handles(render, 'instagram'))}".strip(),

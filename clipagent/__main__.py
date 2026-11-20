@@ -112,6 +112,8 @@ def main() -> None:
     r = sub.add_parser("package", help="cover + captions with credits, ready for approval")
     r.add_argument("post_id")
     r.add_argument("--cover-time", type=float)
+    r.add_argument("--cover-mode", choices=["auto", "face", "frame"], default="auto",
+                   help="auto/face: streamer's webcam on top like the short; frame: plain gameplay frame")
     a = sub.add_parser("approve", help="human approved the post (optionally schedule)")
     a.add_argument("post_id")
     a.add_argument("--when", help="YYYY-MM-DDTHH:MM")
@@ -288,7 +290,7 @@ def main() -> None:
         out({"preview": str(sheet), "times": [round(t, 1) for t in ts]})
     elif cmd == "package":
         from .publish import package
-        out(package(A.post_id, A.cover_time))
+        out(package(A.post_id, A.cover_time, A.cover_mode))
     elif cmd == "approve":
         from .publish import approve
         out(approve(A.post_id, A.when))

@@ -157,7 +157,8 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
    (<70 chars, include #shorts), `youtube_description`, `tiktok`, `instagram`, `hashtags` (4-8, always
    the preset's main tag, see `default_hashtags`). Then `package <post_id>` makes `cover.jpg` and the final caption files, with the credits block
    and creator @tags added automatically. Use `--cover-time <s>` to pick a better cover frame (seconds
-   into the first segment).
+   into the first segment). Split-layout shorts get the streamer's webcam on top of the cover with the
+   text below (`--cover-mode frame` for a plain gameplay frame).
 6. Show the user the video, the cover and the captions. Wait for an OK or changes.
 7. On OK: `slots` suggests free times, then `approve <post_id> --when 2026-11-20T18:00` (writes
    `reminder.ics`). Then publish (next section).
