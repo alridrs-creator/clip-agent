@@ -151,6 +151,46 @@ def suggest_slots(n: int = 7, days: int = 7) -> list[str]:
     return out
 
 
+# ---------------------------------------------------------------- YouTube via Composio
+
+def youtube_payload(post_id: str, privacy: str | None = None) -> dict:
+    """Arguments for Composio's YOUTUBE_UPLOAD_VIDEO tool. Refuses unless the human approved the post.
+
+    The agent passes `title`, `description`, `tags`, `categoryId`, `privacyStatus` and the file at `video_path`
+    to Composio, then records the live URL with `status <post_id> published --url ...`."""
+    p = get_post(post_id)
+    if p.get("status") not in ("approved", "queued"):
+        raise SystemExit("Post is not approved yet - show it to the user and run `approve` first.")
+    cfg = config()
+    caps = p["captions"]
+    title = (caps.get("youtube_title") or post_id).strip()
+    if p.get("format") == "short" and "#shorts" not in title.lower():
+        title = f"{title} #shorts" if len(title) <= 92 else title
+    tags, total = [], 0
+    for h in read_json(OUTPUT / post_id / "captions.json", {}).get("hashtags", []):
+        t = h.lstrip("#").strip()
+        if t and total + len(t) + 1 <= 450:
+            tags.append(t)
+            total += len(t) + 1
+    for c in p.get("creators", []):
+        if c.get("handle") and c["handle"] not in tags:
+            tags.append(c["handle"])
+    video = OUTPUT / post_id / "video.mp4"
+    if not video.exists():
+        raise SystemExit(f"missing {video} - render first")
+    return {
+        "tool": "YOUTUBE_UPLOAD_VIDEO",
+        "title": title[:100],
+        "description": caps.get("youtube_description", "")[:4900],
+        "tags": tags,
+        "categoryId": str(cfg.get("youtube_category_id") or "20"),
+        "privacyStatus": privacy or cfg.get("youtube_privacy") or "public",
+        "video_path": str(video.resolve()),
+        "cover_path": str(Path(p["cover"]).resolve()) if p.get("cover") else None,
+        "scheduled_for": p.get("scheduled_for"),
+    }
+
+
 # ---------------------------------------------------------------- Buffer API
 
 def gql(query: str, variables: dict | None = None) -> dict:

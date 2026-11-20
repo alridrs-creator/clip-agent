@@ -65,7 +65,19 @@ def user(login: str) -> dict | None:
 
 def top_clips(hours: int = 24, limit: int = 20, broadcaster: str | None = None,
               min_views: int = 0, language: str | None = None) -> list[dict]:
-    """Most-viewed clips in the last N hours, for the game or for one streamer."""
+    """Most-viewed clips in the last N hours, for the game or for one streamer.
+
+    With no streamer and no game category set, uses the `streamers` list from config (streamer channels)."""
+    cfg = config()
+    if not broadcaster and not cfg.get("game_name") and cfg.get("streamers"):
+        merged = []
+        for login in cfg["streamers"]:
+            try:
+                merged += top_clips(hours, limit, login, min_views, language)
+            except SystemExit as e:  # one bad login shouldn't stop the run
+                merged.append({"streamer": login, "error": str(e)})
+        ok = sorted((c for c in merged if "error" not in c), key=lambda c: -c["views"])[:limit]
+        return ok + [c for c in merged if "error" in c]
     started = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
     params = {"first": 100, "started_at": started}
     if broadcaster:

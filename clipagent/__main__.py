@@ -115,6 +115,9 @@ def main() -> None:
     st.add_argument("--url", action="append", default=[])
     sub.add_parser("slots", help="suggest next posting slots")
     sub.add_parser("posts", help="list posts and status")
+    y2 = sub.add_parser("youtube-payload", help="upload fields for Composio YOUTUBE_UPLOAD_VIDEO (approved posts only)")
+    y2.add_argument("post_id")
+    y2.add_argument("--privacy", choices=["public", "unlisted", "private"])
     sub.add_parser("buffer-channels", help="list Buffer channels")
     b = sub.add_parser("buffer-schema", help="introspect a Buffer GraphQL type")
     b.add_argument("type_name")
@@ -296,6 +299,9 @@ def main() -> None:
     elif cmd == "posts":
         from .common import ledger
         out([{k: e.get(k) for k in ("post_id", "status", "format", "seconds", "scheduled_for")} for e in ledger()])
+    elif cmd == "youtube-payload":
+        from .publish import youtube_payload
+        out(youtube_payload(A.post_id, A.privacy))
     elif cmd == "buffer-channels":
         from .publish import channels
         out(channels())

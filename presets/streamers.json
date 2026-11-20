@@ -1,0 +1,22 @@
+{
+  "preset": "streamers",
+  "game_name": "",
+  "game_short": "",
+  "spoiler_text": "SPOILERS AHEAD",
+  "default_hashtags": [
+    "#twitchclips",
+    "#streamer",
+    "#clips",
+    "#funny",
+    "#gaming"
+  ],
+  "streamers": [],
+  "youtube_queries": [],
+  "hook_examples": [
+    "CHAT COULD NOT BELIEVE THIS",
+    "HE DID NOT SEE THAT COMING",
+    "SHE WON WITH ONE HP LEFT"
+  ],
+  "notes": "Streamer-clip channel (any game or Just Chatting). No game category: clips come from the Twitch logins in `streamers` (`config streamers='[\"login1\",\"login2\"]'`). Spoiler card off by default unless the clip shows a game's story.",
+  "spoiler_default": false
+}
