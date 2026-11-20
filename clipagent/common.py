@@ -40,6 +40,7 @@ DEFAULT_CONFIG = {
     "caption_font_file": "",
     "subtitle_color": "&H0000FFFF",   # ASS BGR: yellow highlight
     "max_seconds": 59,
+    "trim_bottom": 0.14,          # share of the source cut off the bottom (hides streamers' own burned-in captions)
     "credit_mode": "corner",      # corner (whole clip, small) | intro (first 3s, bigger) | both
     "spoiler_default": True,
     "music_volume": 0.12,

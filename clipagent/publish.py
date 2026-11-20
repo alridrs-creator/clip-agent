@@ -72,6 +72,32 @@ def _handles(render: dict, platform: str) -> list[str]:
     return out
 
 
+def _slug(text: str, n: int = 40) -> str:
+    import re
+    t = re.sub(r"#\w+", "", text or "")
+    t = re.sub(r"[^A-Za-z0-9]+", "-", t).strip("-")
+    return t[:n].rstrip("-")
+
+
+def named_video(d: Path, render: dict, cap: dict) -> Path:
+    """Copy video.mp4 to <Streamer>_<title>.mp4 so files are easy to find and upload by hand."""
+    import shutil
+    names = []
+    for s in render.get("sources", []):
+        n = "own" if s.get("own_footage") else (s.get("creator") or {}).get("handle") or "unknown"
+        if n not in names:
+            names.append(n)
+    title = _slug(cap.get("youtube_title") or cap.get("cover_text", "").replace("|", " "))
+    stem = "_".join([_slug(n, 25) for n in names][:3] + ([title] if title else [])) or "video"
+    src = d / "video.mp4"
+    for old in d.glob("*.mp4"):
+        if old.name != "video.mp4":
+            old.unlink()
+    dst = d / f"{stem}.mp4"
+    shutil.copy2(src, dst)
+    return dst
+
+
 def package(post_id: str, cover_time: float | None = None, cover_mode: str = "auto") -> dict:
     """cover_mode: auto (facecam on top when the short uses the split layout, else plain frame) | face | frame"""
     from .brand import cover_from_frame, split_cover_frame
@@ -108,7 +134,8 @@ def package(post_id: str, cover_time: float | None = None, cover_mode: str = "au
     }
     for k, v in texts.items():
         (d / f"caption_{k}.txt").write_text(v, encoding="utf-8")
-    post = {"post_id": post_id, "status": "awaiting_approval", "video": str(d / "video.mp4"), "cover": str(cover),
+    video = named_video(d, render, cap)
+    post = {"post_id": post_id, "status": "awaiting_approval", "video": str(video), "cover": str(cover),
             "captions": texts, "creators": [s["creator"] for s in render["sources"]], "seconds": render["seconds"],
             "format": render["format"]}
     write_json(d / "post.json", post)
@@ -184,7 +211,7 @@ def youtube_payload(post_id: str, privacy: str | None = None) -> dict:
     for c in p.get("creators", []):
         if c.get("handle") and c["handle"] not in tags:
             tags.append(c["handle"])
-    video = OUTPUT / post_id / "video.mp4"
+    video = Path(p["video"]) if p.get("video") and Path(p["video"]).exists() else OUTPUT / post_id / "video.mp4"
     if not video.exists():
         raise SystemExit(f"missing {video} - render first")
     return {

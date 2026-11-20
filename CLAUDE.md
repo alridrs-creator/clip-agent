@@ -133,6 +133,9 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
      `blur` (zoomed gameplay band on a blurred background, best for pure gameplay), `crop` (full-screen
      centre crop). If the facecam box is wrong, look at `output/<post_id>/work/facecam0.png` and set
      `"cam": {"x":..,"y":..,"w":..,"h":..}` in source pixels.
+   - `trim_bottom` (plan or segment, default `config trim_bottom` 0.14): cuts that share off the bottom of the
+     gameplay so a streamer's own burned-in captions don't show under ours. Raise it if they still show
+     in the preview; set 0 when the bottom of the screen matters.
    - `hook`: 3-7 words, curiosity or shock, ALL CAPS, no emoji ("HE STOLE A JET IN 10 SECONDS").
    - `subtitles`: `original` (transcribe the streamer), `voiceover`, or `none`.
    - `voiceover`: when there's no talking (own gameplay, silent YouTube footage) or to add commentary.
@@ -155,7 +158,8 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
    Fix and re-render if needed.
 5. Fill **captions.json**: `cover_text` (2 lines split with `|`, second line is yellow), `youtube_title`
    (<70 chars, include #shorts), `youtube_description`, `tiktok`, `instagram`, `hashtags` (4-8, always
-   the preset's main tag, see `default_hashtags`). Then `package <post_id>` makes `cover.jpg` and the final caption files, with the credits block
+   the preset's main tag, see `default_hashtags`). Then `package <post_id>` makes `cover.jpg`, a copy of the video named `<Streamer>_<title>.mp4` (upload
+   that one; `youtube-payload` points at it) and the final caption files, with the credits block
    and creator @tags added automatically. Use `--cover-time <s>` to pick a better cover frame (seconds
    into the first segment). Split-layout shorts get the streamer's webcam on top of the cover with the
    text below (`--cover-mode frame` for a plain gameplay frame).
