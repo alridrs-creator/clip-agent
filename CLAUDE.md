@@ -107,6 +107,7 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
 | Source | Commands |
 |---|---|
 | Top Twitch clips for the game (or, with the `streamers` preset, for every login in `config streamers`) | `twitch-top --hours 24 --limit 15` (add `--streamer name`, `--language en`, `--min-views 500`), then `twitch-clip <url> <url> ...` |
+| Today's top streamers (no fixed list) | `twitch-trending --n 5 --save` picks the 30 most-watched live English streams, ranks them by last-24 h clip views, saves the top 5 to `config streamers`; then `twitch-top` as above |
 | Twitch VOD + chat spikes (the "spike finder" method) | `twitch-vods <streamer>`, `twitch-chat <vod_id>`, `spikes chat <chat_file> --top 10`, then `twitch-vod-cut <vod_id> <start> <end>` for the best windows |
 | Live stream right now | `live <channel> --minutes 60` (records video + chat), then `spikes chat library/<id>/chat.jsonl` and `cut <clip_id> <start> <end>` |
 | YouTube | `yt-search "<game> <topic>" --recent` (the preset's `youtube_queries` are good starts), `yt-download <url>` then `transcript <clip_id>` + a frame grid to pick a passage (`spikes heatmap` works only when yt-info reports has_heatmap; `spikes audio` for loud moments), then `yt-download <url> --start S --end E` |
@@ -195,7 +196,7 @@ offer `--delete-files` to delete local copies. `blocklist` shows everyone blocke
 
 ## Command reference
 
-`doctor` · `preset [name]` · `config [k=v ...]` · `twitch-top` · `twitch-clip` · `twitch-vods` · `twitch-chat` ·
+`doctor` · `preset [name]` · `config [k=v ...]` · `twitch-top` · `twitch-trending` · `twitch-clip` · `twitch-vods` · `twitch-chat` ·
 `twitch-vod-cut` · `live` · `yt-search` · `yt-info` · `yt-download` · `inbox` · `clips` · `cut` ·
 `spikes chat|audio|heatmap` · `transcript` · `frame` · `facecam` · `voices` · `new-post [--long]` · `render` ·
 `preview` · `package` · `approve` · `status` · `slots` · `posts` · `youtube-payload` · `buffer-channels` · `buffer-schema` ·

@@ -115,6 +115,41 @@ def top_clips(hours: int = 24, limit: int = 20, broadcaster: str | None = None,
     return out
 
 
+def trending_streamers(n: int = 5, language: str | None = "en", pool: int = 30, hours: int = 24,
+                       save: bool = False) -> list[dict]:
+    """Pick today's top streamers automatically.
+
+    Takes the `pool` most-watched live streams right now (optionally one language), then ranks those
+    streamers by the total views of their clips from the last `hours` hours, so a big streamer who is live
+    but had a quiet day loses to one whose moments are blowing up. Blocklisted creators are skipped.
+    With save=True the winners are written to config `streamers` for `twitch-top`."""
+    params = {"first": 100}
+    if language:
+        params["language"] = language
+    streams = helix("streams", **params)["data"]
+    logins, seen = [], set()
+    for st in streams:
+        login = st["user_login"]
+        if login in seen or is_blocked(creator(st["user_name"], "twitch", login)):
+            continue
+        seen.add(login)
+        logins.append((login, st["user_id"], st["viewer_count"], st.get("game_name")))
+        if len(logins) >= pool:
+            break
+    started = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ranked = []
+    for login, uid, viewers, game in logins:
+        clips = helix("clips", broadcaster_id=uid, started_at=started, first=20)["data"]
+        ranked.append({"streamer": login, "clip_views": sum(c["view_count"] for c in clips),
+                       "clips": len(clips), "live_viewers": viewers, "game": game})
+    ranked.sort(key=lambda r: (-r["clip_views"], -r["live_viewers"]))
+    top = ranked[:n]
+    if save:
+        from .common import save_config
+        save_config({"streamers": [r["streamer"] for r in top]})
+    return top
+
+
 def download_clip(clip_url_or_id: str) -> dict:
     """Download one Twitch clip into the library with full credit metadata."""
     cid = clip_url_or_id.rstrip("/").split("/")[-1].split("?")[0]

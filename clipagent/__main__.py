@@ -31,6 +31,12 @@ def main() -> None:
     t.add_argument("--streamer")
     t.add_argument("--min-views", type=int, default=0)
     t.add_argument("--language")
+    t = sub.add_parser("twitch-trending", help="pick today's top streamers (live now, ranked by last-day clip views)")
+    t.add_argument("--n", type=int, default=5)
+    t.add_argument("--language", default="en", help="stream language, or 'any'")
+    t.add_argument("--pool", type=int, default=30)
+    t.add_argument("--hours", type=int, default=24)
+    t.add_argument("--save", action="store_true", help="write them to config streamers")
     t = sub.add_parser("twitch-clip", help="download Twitch clip(s) by url/id")
     t.add_argument("urls", nargs="+")
     t = sub.add_parser("twitch-vods", help="latest VODs of a streamer")
@@ -173,6 +179,9 @@ def main() -> None:
     elif cmd == "twitch-top":
         from .twitch import top_clips
         out(top_clips(A.hours, A.limit, A.streamer, A.min_views, A.language))
+    elif cmd == "twitch-trending":
+        from .twitch import trending_streamers
+        out(trending_streamers(A.n, None if A.language == "any" else A.language, A.pool, A.hours, A.save))
     elif cmd == "twitch-clip":
         from .twitch import download_clip
         out([download_clip(u) for u in A.urls])
