@@ -65,7 +65,19 @@ def user(login: str) -> dict | None:
 
 def top_clips(hours: int = 24, limit: int = 20, broadcaster: str | None = None,
               min_views: int = 0, language: str | None = None) -> list[dict]:
-    """Most-viewed clips in the last N hours, for the game or for one streamer."""
+    """Most-viewed clips in the last N hours, for the game or for one streamer.
+
+    With no streamer and no game category set, uses the `streamers` list from config (streamer channels)."""
+    cfg = config()
+    if not broadcaster and not cfg.get("game_name") and cfg.get("streamers"):
+        merged = []
+        for login in cfg["streamers"]:
+            try:
+                merged += top_clips(hours, limit, login, min_views, language)
+            except SystemExit as e:  # one bad login shouldn't stop the run
+                merged.append({"streamer": login, "error": str(e)})
+        ok = sorted((c for c in merged if "error" not in c), key=lambda c: -c["views"])[:limit]
+        return ok + [c for c in merged if "error" in c]
     started = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
     params = {"first": 100, "started_at": started}
     if broadcaster:
@@ -101,6 +113,41 @@ def top_clips(hours: int = 24, limit: int = 20, broadcaster: str | None = None,
         if len(out) >= limit:
             break
     return out
+
+
+def trending_streamers(n: int = 5, language: str | None = "en", pool: int = 30, hours: int = 24,
+                       save: bool = False) -> list[dict]:
+    """Pick today's top streamers automatically.
+
+    Takes the `pool` most-watched live streams right now (optionally one language), then ranks those
+    streamers by the total views of their clips from the last `hours` hours, so a big streamer who is live
+    but had a quiet day loses to one whose moments are blowing up. Blocklisted creators are skipped.
+    With save=True the winners are written to config `streamers` for `twitch-top`."""
+    params = {"first": 100}
+    if language:
+        params["language"] = language
+    streams = helix("streams", **params)["data"]
+    logins, seen = [], set()
+    for st in streams:
+        login = st["user_login"]
+        if login in seen or is_blocked(creator(st["user_name"], "twitch", login)):
+            continue
+        seen.add(login)
+        logins.append((login, st["user_id"], st["viewer_count"], st.get("game_name")))
+        if len(logins) >= pool:
+            break
+    started = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ranked = []
+    for login, uid, viewers, game in logins:
+        clips = helix("clips", broadcaster_id=uid, started_at=started, first=20)["data"]
+        ranked.append({"streamer": login, "clip_views": sum(c["view_count"] for c in clips),
+                       "clips": len(clips), "live_viewers": viewers, "game": game})
+    ranked.sort(key=lambda r: (-r["clip_views"], -r["live_viewers"]))
+    top = ranked[:n]
+    if save:
+        from .common import save_config
+        save_config({"streamers": [r["streamer"] for r in top]})
+    return top
 
 
 def download_clip(clip_url_or_id: str) -> dict:

@@ -106,7 +106,8 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
 
 | Source | Commands |
 |---|---|
-| Top Twitch clips for the game | `twitch-top --hours 24 --limit 15` (add `--streamer name`, `--language en`, `--min-views 500`), then `twitch-clip <url> <url> ...` |
+| Top Twitch clips for the game (or, with the `streamers` preset, for every login in `config streamers`) | `twitch-top --hours 24 --limit 15` (add `--streamer name`, `--language en`, `--min-views 500`), then `twitch-clip <url> <url> ...` |
+| Today's top streamers (no fixed list) | `twitch-trending --n 5 --save` picks the 30 most-watched live English streams, ranks them by last-24 h clip views, saves the top 5 to `config streamers`; then `twitch-top` as above |
 | Twitch VOD + chat spikes (the "spike finder" method) | `twitch-vods <streamer>`, `twitch-chat <vod_id>`, `spikes chat <chat_file> --top 10`, then `twitch-vod-cut <vod_id> <start> <end>` for the best windows |
 | Live stream right now | `live <channel> --minutes 60` (records video + chat), then `spikes chat library/<id>/chat.jsonl` and `cut <clip_id> <start> <end>` |
 | YouTube | `yt-search "<game> <topic>" --recent` (the preset's `youtube_queries` are good starts), `yt-download <url>` then `transcript <clip_id>` + a frame grid to pick a passage (`spikes heatmap` works only when yt-info reports has_heatmap; `spikes audio` for loud moments), then `yt-download <url> --start S --end E` |
@@ -156,7 +157,8 @@ Finish with: `config onboarding_done=true` and a short "here's what you can ask 
    (<70 chars, include #shorts), `youtube_description`, `tiktok`, `instagram`, `hashtags` (4-8, always
    the preset's main tag, see `default_hashtags`). Then `package <post_id>` makes `cover.jpg` and the final caption files, with the credits block
    and creator @tags added automatically. Use `--cover-time <s>` to pick a better cover frame (seconds
-   into the first segment).
+   into the first segment). Split-layout shorts get the streamer's webcam on top of the cover with the
+   text below (`--cover-mode frame` for a plain gameplay frame).
 6. Show the user the video, the cover and the captions. Wait for an OK or changes.
 7. On OK: `slots` suggests free times, then `approve <post_id> --when 2026-11-20T18:00` (writes
    `reminder.ics`). Then publish (next section).
@@ -171,6 +173,12 @@ Put every creator in the description (package does this) and add chapters (times
 
 ## Publishing
 
+- **YouTube through Composio (preferred when the Composio YouTube connector is connected):** only for
+  approved posts. Run `youtube-payload <post_id>` (add `--privacy private` for a test upload). It prints
+  the title (with #shorts), description with credits, tags, category and the absolute `video_path`. Call
+  Composio's `YOUTUBE_UPLOAD_VIDEO` with those fields and the video file. Then save the link with
+  `status <post_id> published --url https://youtube.com/shorts/<video_id>`. If the user wants the post at
+  a later time, wait for the approved slot (a scheduled task) rather than uploading early.
 - **Website route (default):** open buffer.com, the user signs in, create a post per channel, upload
   `video.mp4`, set the cover, paste `caption_<platform>.txt` (YouTube: title from
   `caption_youtube_title.txt`). Choose "Add to Queue" or the approved time, and ask before the final click.
@@ -189,10 +197,10 @@ offer `--delete-files` to delete local copies. `blocklist` shows everyone blocke
 
 ## Command reference
 
-`doctor` · `preset [name]` · `config [k=v ...]` · `twitch-top` · `twitch-clip` · `twitch-vods` · `twitch-chat` ·
+`doctor` · `preset [name]` · `config [k=v ...]` · `twitch-top` · `twitch-trending` · `twitch-clip` · `twitch-vods` · `twitch-chat` ·
 `twitch-vod-cut` · `live` · `yt-search` · `yt-info` · `yt-download` · `inbox` · `clips` · `cut` ·
 `spikes chat|audio|heatmap` · `transcript` · `frame` · `facecam` · `voices` · `new-post [--long]` · `render` ·
-`preview` · `package` · `approve` · `status` · `slots` · `posts` · `buffer-channels` · `buffer-schema` ·
+`preview` · `package` · `approve` · `status` · `slots` · `posts` · `youtube-payload` · `buffer-channels` · `buffer-schema` ·
 `buffer-queue` · `brand` · `names` · `takedown` · `blocklist`
 
 Presets: `presets/<game>.json` (`preset` to list/apply). Folders: `inbox/` (user drops recordings), `library/` (fetched clips + meta.json), `output/` (posts),

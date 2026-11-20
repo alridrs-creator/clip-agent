@@ -72,8 +72,9 @@ def _handles(render: dict, platform: str) -> list[str]:
     return out
 
 
-def package(post_id: str, cover_time: float | None = None) -> dict:
-    from .brand import cover_from_frame
+def package(post_id: str, cover_time: float | None = None, cover_mode: str = "auto") -> dict:
+    """cover_mode: auto (facecam on top when the short uses the split layout, else plain frame) | face | frame"""
+    from .brand import cover_from_frame, split_cover_frame
     from .layout import save_frame
     d = OUTPUT / post_id
     render = read_json(d / "render.json", None)
@@ -90,7 +91,15 @@ def package(post_id: str, cover_time: float | None = None) -> dict:
     t = cover_time if cover_time is not None else probe(raw)["duration"] * 0.4
     frame = save_frame(raw, t, d / "work" / "cover_frame.png")
     vertical = render["format"] == "short"
-    cover = cover_from_frame(frame, cap.get("cover_text") or "", d / ("cover.jpg"), vertical=vertical)
+    first = (render.get("sources") or [{}])[0]
+    cam = first.get("cam") if first.get("layout") == "split" else None
+    text_pos = "top"
+    if vertical and cam and cover_mode in ("auto", "face"):
+        frame = split_cover_frame(frame, cam, d / "work" / "cover_split.png")
+        text_pos = "bottom"
+    elif cover_mode == "face" and not cam:
+        print("no facecam in this short - using a plain frame for the cover", flush=True)
+    cover = cover_from_frame(frame, cap.get("cover_text") or "", d / ("cover.jpg"), vertical=vertical, text_pos=text_pos)
     texts = {
         "tiktok": f"{cap.get('tiktok', '')}\n\n{credits}\n{tags} {' '.join(_handles(render, 'tiktok'))}".strip(),
         "instagram": f"{cap.get('instagram', '')}\n\n{credits}\n.\n{tags} {' '.join(_handles(render, 'instagram'))}".strip(),
@@ -149,6 +158,46 @@ def suggest_slots(n: int = 7, days: int = 7) -> list[str]:
             if len(out) >= n:
                 return out
     return out
+
+
+# ---------------------------------------------------------------- YouTube via Composio
+
+def youtube_payload(post_id: str, privacy: str | None = None) -> dict:
+    """Arguments for Composio's YOUTUBE_UPLOAD_VIDEO tool. Refuses unless the human approved the post.
+
+    The agent passes `title`, `description`, `tags`, `categoryId`, `privacyStatus` and the file at `video_path`
+    to Composio, then records the live URL with `status <post_id> published --url ...`."""
+    p = get_post(post_id)
+    if p.get("status") not in ("approved", "queued"):
+        raise SystemExit("Post is not approved yet - show it to the user and run `approve` first.")
+    cfg = config()
+    caps = p["captions"]
+    title = (caps.get("youtube_title") or post_id).strip()
+    if p.get("format") == "short" and "#shorts" not in title.lower():
+        title = f"{title} #shorts" if len(title) <= 92 else title
+    tags, total = [], 0
+    for h in read_json(OUTPUT / post_id / "captions.json", {}).get("hashtags", []):
+        t = h.lstrip("#").strip()
+        if t and total + len(t) + 1 <= 450:
+            tags.append(t)
+            total += len(t) + 1
+    for c in p.get("creators", []):
+        if c.get("handle") and c["handle"] not in tags:
+            tags.append(c["handle"])
+    video = OUTPUT / post_id / "video.mp4"
+    if not video.exists():
+        raise SystemExit(f"missing {video} - render first")
+    return {
+        "tool": "YOUTUBE_UPLOAD_VIDEO",
+        "title": title[:100],
+        "description": caps.get("youtube_description", "")[:4900],
+        "tags": tags,
+        "categoryId": str(cfg.get("youtube_category_id") or "20"),
+        "privacyStatus": privacy or cfg.get("youtube_privacy") or "public",
+        "video_path": str(video.resolve()),
+        "cover_path": str(Path(p["cover"]).resolve()) if p.get("cover") else None,
+        "scheduled_for": p.get("scheduled_for"),
+    }
 
 
 # ---------------------------------------------------------------- Buffer API

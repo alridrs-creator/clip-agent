@@ -50,6 +50,9 @@ DEFAULT_CONFIG = {
     "gemini_image_model": "gemini-2.5-flash-image",
     "buffer_media_url_prefix": "",     # public URL that mirrors output/ (needed for Buffer API video upload)
     "post_times": ["12:00", "18:00", "21:00"],
+    "streamers": [],                   # Twitch logins to watch when no game category is set (streamer channels)
+    "youtube_category_id": "20",       # YouTube category for uploads (20 = Gaming)
+    "youtube_privacy": "public",       # public | unlisted | private for Composio YouTube uploads
 }
 
 

@@ -31,6 +31,12 @@ def main() -> None:
     t.add_argument("--streamer")
     t.add_argument("--min-views", type=int, default=0)
     t.add_argument("--language")
+    t = sub.add_parser("twitch-trending", help="pick today's top streamers (live now, ranked by last-day clip views)")
+    t.add_argument("--n", type=int, default=5)
+    t.add_argument("--language", default="en", help="stream language, or 'any'")
+    t.add_argument("--pool", type=int, default=30)
+    t.add_argument("--hours", type=int, default=24)
+    t.add_argument("--save", action="store_true", help="write them to config streamers")
     t = sub.add_parser("twitch-clip", help="download Twitch clip(s) by url/id")
     t.add_argument("urls", nargs="+")
     t = sub.add_parser("twitch-vods", help="latest VODs of a streamer")
@@ -106,6 +112,8 @@ def main() -> None:
     r = sub.add_parser("package", help="cover + captions with credits, ready for approval")
     r.add_argument("post_id")
     r.add_argument("--cover-time", type=float)
+    r.add_argument("--cover-mode", choices=["auto", "face", "frame"], default="auto",
+                   help="auto/face: streamer's webcam on top like the short; frame: plain gameplay frame")
     a = sub.add_parser("approve", help="human approved the post (optionally schedule)")
     a.add_argument("post_id")
     a.add_argument("--when", help="YYYY-MM-DDTHH:MM")
@@ -115,6 +123,9 @@ def main() -> None:
     st.add_argument("--url", action="append", default=[])
     sub.add_parser("slots", help="suggest next posting slots")
     sub.add_parser("posts", help="list posts and status")
+    y2 = sub.add_parser("youtube-payload", help="upload fields for Composio YOUTUBE_UPLOAD_VIDEO (approved posts only)")
+    y2.add_argument("post_id")
+    y2.add_argument("--privacy", choices=["public", "unlisted", "private"])
     sub.add_parser("buffer-channels", help="list Buffer channels")
     b = sub.add_parser("buffer-schema", help="introspect a Buffer GraphQL type")
     b.add_argument("type_name")
@@ -170,6 +181,9 @@ def main() -> None:
     elif cmd == "twitch-top":
         from .twitch import top_clips
         out(top_clips(A.hours, A.limit, A.streamer, A.min_views, A.language))
+    elif cmd == "twitch-trending":
+        from .twitch import trending_streamers
+        out(trending_streamers(A.n, None if A.language == "any" else A.language, A.pool, A.hours, A.save))
     elif cmd == "twitch-clip":
         from .twitch import download_clip
         out([download_clip(u) for u in A.urls])
@@ -276,7 +290,7 @@ def main() -> None:
         out({"preview": str(sheet), "times": [round(t, 1) for t in ts]})
     elif cmd == "package":
         from .publish import package
-        out(package(A.post_id, A.cover_time))
+        out(package(A.post_id, A.cover_time, A.cover_mode))
     elif cmd == "approve":
         from .publish import approve
         out(approve(A.post_id, A.when))
@@ -296,6 +310,9 @@ def main() -> None:
     elif cmd == "posts":
         from .common import ledger
         out([{k: e.get(k) for k in ("post_id", "status", "format", "seconds", "scheduled_for")} for e in ledger()])
+    elif cmd == "youtube-payload":
+        from .publish import youtube_payload
+        out(youtube_payload(A.post_id, A.privacy))
     elif cmd == "buffer-channels":
         from .publish import channels
         out(channels())
